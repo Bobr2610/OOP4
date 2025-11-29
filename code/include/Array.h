@@ -4,117 +4,148 @@
 #include <memory>
 #include <stdexcept>
 #include <algorithm>
+#include <cstdlib>
 
 template<class T>
 class Array {
 private:
-    std::shared_ptr<T[]> data_;
-    size_t size_;
+    struct ArrayDeleter {
+        std::shared_ptr<size_t> size_ptr_;
+        ArrayDeleter(std::shared_ptr<size_t> size_ptr = nullptr) : size_ptr_(size_ptr) {}
+        void operator()(T* ptr) const {
+            if (ptr && size_ptr_) {
+                for (size_t i = 0; i < *size_ptr_; ++i) {
+                    ptr[i].~T();
+                }
+                ::operator delete[](ptr);
+            }
+        }
+    };
+    
+    std::shared_ptr<T> data_;
+    std::shared_ptr<size_t> size_ptr_;
     size_t capacity_;
 
     void resize(size_t newCapacity) {
         if (newCapacity <= capacity_) return;
         
-        std::shared_ptr<T[]> newData(new T[newCapacity]);
+        T* rawPtr = static_cast<T*>(::operator new[](newCapacity * sizeof(T)));
         
-        for (size_t i = 0; i < size_; ++i) {
-            newData[i] = std::move(data_[i]);
+        for (size_t i = 0; i < *size_ptr_; ++i) {
+            new (rawPtr + i) T(std::move(data_.get()[i]));
+            data_.get()[i].~T();
         }
         
-        data_ = newData;
+        data_ = std::shared_ptr<T>(rawPtr, ArrayDeleter(size_ptr_));
         capacity_ = newCapacity;
     }
 
 public:
-    Array() : size_(0), capacity_(10) {
-        data_ = std::shared_ptr<T[]>(new T[capacity_]);
+    Array() : size_ptr_(std::make_shared<size_t>(0)), capacity_(10) {
+        T* rawPtr = static_cast<T*>(::operator new[](capacity_ * sizeof(T)));
+        data_ = std::shared_ptr<T>(rawPtr, ArrayDeleter(size_ptr_));
     }
     
-    explicit Array(size_t initialCapacity) : size_(0), capacity_(initialCapacity) {
-        data_ = std::shared_ptr<T[]>(new T[capacity_]);
+    explicit Array(size_t initialCapacity) : size_ptr_(std::make_shared<size_t>(0)), capacity_(initialCapacity) {
+        T* rawPtr = static_cast<T*>(::operator new[](capacity_ * sizeof(T)));
+        data_ = std::shared_ptr<T>(rawPtr, ArrayDeleter(size_ptr_));
     }
     
-    ~Array() = default;
+    ~Array() {
+        clear();
+    }
     
-    Array(const Array& other) : size_(other.size_), capacity_(other.capacity_) {
-        data_ = std::shared_ptr<T[]>(new T[capacity_]);
-        for (size_t i = 0; i < size_; ++i) {
-            data_[i] = other.data_[i];
+    Array(const Array& other) : size_ptr_(std::make_shared<size_t>(*other.size_ptr_)), capacity_(other.capacity_) {
+        T* rawPtr = static_cast<T*>(::operator new[](capacity_ * sizeof(T)));
+        data_ = std::shared_ptr<T>(rawPtr, ArrayDeleter(size_ptr_));
+        for (size_t i = 0; i < *size_ptr_; ++i) {
+            new (rawPtr + i) T(other.data_.get()[i]);
         }
     }
     
     Array& operator=(const Array& other) {
         if (this != &other) {
-            size_ = other.size_;
+            for (size_t i = 0; i < *size_ptr_; ++i) {
+                data_.get()[i].~T();
+            }
+            
+            size_ptr_ = std::make_shared<size_t>(*other.size_ptr_);
             capacity_ = other.capacity_;
-            data_ = std::shared_ptr<T[]>(new T[capacity_]);
-            for (size_t i = 0; i < size_; ++i) {
-                data_[i] = other.data_[i];
+            T* rawPtr = static_cast<T*>(::operator new[](capacity_ * sizeof(T)));
+            data_ = std::shared_ptr<T>(rawPtr, ArrayDeleter(size_ptr_));
+            for (size_t i = 0; i < *size_ptr_; ++i) {
+                new (rawPtr + i) T(other.data_.get()[i]);
             }
         }
         return *this;
     }
     
     Array(Array&& other) noexcept 
-        : data_(std::move(other.data_)), size_(other.size_), capacity_(other.capacity_) {
-        other.size_ = 0;
+        : data_(std::move(other.data_)), size_ptr_(std::move(other.size_ptr_)), capacity_(other.capacity_) {
+        other.size_ptr_ = std::make_shared<size_t>(0);
         other.capacity_ = 0;
     }
     
     Array& operator=(Array&& other) noexcept {
         if (this != &other) {
+            for (size_t i = 0; i < *size_ptr_; ++i) {
+                data_.get()[i].~T();
+            }
+            
             data_ = std::move(other.data_);
-            size_ = other.size_;
+            size_ptr_ = std::move(other.size_ptr_);
             capacity_ = other.capacity_;
-            other.size_ = 0;
+            other.size_ptr_ = std::make_shared<size_t>(0);
             other.capacity_ = 0;
         }
         return *this;
     }
     
     void push_back(const T& value) {
-        if (size_ >= capacity_) {
+        if (*size_ptr_ >= capacity_) {
             resize(capacity_ * 2);
         }
-        data_[size_] = value;
-        ++size_;
+        new (data_.get() + *size_ptr_) T(value);
+        ++(*size_ptr_);
     }
     
     void push_back(T&& value) {
-        if (size_ >= capacity_) {
+        if (*size_ptr_ >= capacity_) {
             resize(capacity_ * 2);
         }
-        data_[size_] = std::move(value);
-        ++size_;
+        new (data_.get() + *size_ptr_) T(std::move(value));
+        ++(*size_ptr_);
     }
     
     void remove(size_t index) {
-        if (index >= size_) {
+        if (index >= *size_ptr_) {
             throw std::out_of_range("Index out of range");
         }
         
-        for (size_t i = index; i < size_ - 1; ++i) {
-            data_[i] = std::move(data_[i + 1]);
+        data_.get()[index].~T();
+        for (size_t i = index; i < *size_ptr_ - 1; ++i) {
+            new (data_.get() + i) T(std::move(data_.get()[i + 1]));
+            data_.get()[i + 1].~T();
         }
-        --size_;
+        --(*size_ptr_);
     }
     
     T& operator[](size_t index) {
-        if (index >= size_) {
+        if (index >= *size_ptr_) {
             throw std::out_of_range("Index out of range");
         }
-        return data_[index];
+        return data_.get()[index];
     }
     
     const T& operator[](size_t index) const {
-        if (index >= size_) {
+        if (index >= *size_ptr_) {
             throw std::out_of_range("Index out of range");
         }
-        return data_[index];
+        return data_.get()[index];
     }
     
     size_t size() const {
-        return size_;
+        return *size_ptr_;
     }
     
     size_t capacity() const {
@@ -122,13 +153,15 @@ public:
     }
     
     bool empty() const {
-        return size_ == 0;
+        return *size_ptr_ == 0;
     }
     
     void clear() {
-        size_ = 0;
+        for (size_t i = 0; i < *size_ptr_; ++i) {
+            data_.get()[i].~T();
+        }
+        *size_ptr_ = 0;
     }
 };
 
 #endif
-
