@@ -7,14 +7,12 @@
 #include "Array.h"
 #include <memory>
 
-// Point Tests
 TEST(PointTest, Basic) {
     Point<int> p(5, 3);
     EXPECT_EQ((p + Point<int>(2, 1)).getX(), 7);
     EXPECT_TRUE(p == Point<int>(5, 3));
 }
 
-// Figure Area Tests
 TEST(FigureTest, Areas) {
     Triangle<double> t(Point<double>(0, 0), Point<double>(4, 0), Point<double>(0, 3));
     Square<double> s(Point<double>(0, 0), 5.0);
@@ -24,7 +22,6 @@ TEST(FigureTest, Areas) {
     EXPECT_NEAR(static_cast<double>(r), 15.0, 0.01);
 }
 
-// Array Tests
 TEST(ArrayTest, Basic) {
     Array<int> arr;
     arr.push_back(10);

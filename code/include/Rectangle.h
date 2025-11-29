@@ -8,10 +8,6 @@
 template<ScalarType T>
 class Rectangle : public Figure<T> {
 public:
-    // Constructor: creates a rectangle inscribed in a circle
-    // center: center of the circumscribed circle
-    // width: width of the rectangle
-    // height: height of the rectangle
     Rectangle(const Point<T>& center, T width, T height) {
         T halfWidth = width / 2;
         T halfHeight = height / 2;
@@ -30,7 +26,6 @@ public:
         ));
     }
     
-    // Constructor from vertices
     Rectangle(const Point<T>& v1, const Point<T>& v2, const Point<T>& v3, const Point<T>& v4) {
         this->vertices_.push_back(std::make_unique<Point<T>>(v1));
         this->vertices_.push_back(std::make_unique<Point<T>>(v2));
@@ -52,7 +47,6 @@ public:
     operator double() const override {
         if (this->vertices_.size() != 4) return 0.0;
         
-        // Calculate area using cross product (shoelace formula)
         T sum = 0;
         for (size_t i = 0; i < 4; ++i) {
             size_t j = (i + 1) % 4;
@@ -67,5 +61,5 @@ public:
     }
 };
 
-#endif // RECTANGLE_H
+#endif
 

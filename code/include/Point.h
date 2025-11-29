@@ -5,7 +5,6 @@
 #include <concepts>
 #include <iostream>
 
-// Concept to check if T is a scalar type
 template<typename T>
 concept ScalarType = std::is_arithmetic_v<T>;
 
@@ -49,5 +48,5 @@ public:
     }
 };
 
-#endif // POINT_H
+#endif
 

@@ -12,11 +12,7 @@
 template<ScalarType T>
 class Triangle : public Figure<T> {
 public:
-    // Constructor: creates an isosceles triangle inscribed in a circle
-    // center: center of the circumscribed circle
-    // radius: radius of the circumscribed circle
     Triangle(const Point<T>& center, T radius) {
-        // For isosceles triangle, we place vertices at 0°, 120°, 240°
         T angle1 = 0;
         T angle2 = 2 * M_PI / 3;
         T angle3 = 4 * M_PI / 3;
@@ -35,7 +31,6 @@ public:
         ));
     }
     
-    // Constructor from vertices
     Triangle(const Point<T>& v1, const Point<T>& v2, const Point<T>& v3) {
         this->vertices_.push_back(std::make_unique<Point<T>>(v1));
         this->vertices_.push_back(std::make_unique<Point<T>>(v2));
@@ -63,7 +58,6 @@ public:
         T x3 = this->vertices_[2]->getX();
         T y3 = this->vertices_[2]->getY();
         
-        // Using cross product formula for triangle area
         return 0.5 * std::abs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1));
     }
     
@@ -72,5 +66,5 @@ public:
     }
 };
 
-#endif // TRIANGLE_H
+#endif
 

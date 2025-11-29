@@ -15,10 +15,8 @@ private:
     void resize(size_t newCapacity) {
         if (newCapacity <= capacity_) return;
         
-        // Create new array with larger capacity
         std::shared_ptr<T[]> newData(new T[newCapacity]);
         
-        // Move elements from old array to new array
         for (size_t i = 0; i < size_; ++i) {
             newData[i] = std::move(data_[i]);
         }
@@ -38,7 +36,6 @@ public:
     
     ~Array() = default;
     
-    // Copy constructor
     Array(const Array& other) : size_(other.size_), capacity_(other.capacity_) {
         data_ = std::shared_ptr<T[]>(new T[capacity_]);
         for (size_t i = 0; i < size_; ++i) {
@@ -46,7 +43,6 @@ public:
         }
     }
     
-    // Copy assignment
     Array& operator=(const Array& other) {
         if (this != &other) {
             size_ = other.size_;
@@ -59,14 +55,12 @@ public:
         return *this;
     }
     
-    // Move constructor
     Array(Array&& other) noexcept 
         : data_(std::move(other.data_)), size_(other.size_), capacity_(other.capacity_) {
         other.size_ = 0;
         other.capacity_ = 0;
     }
     
-    // Move assignment
     Array& operator=(Array&& other) noexcept {
         if (this != &other) {
             data_ = std::move(other.data_);
@@ -99,7 +93,6 @@ public:
             throw std::out_of_range("Index out of range");
         }
         
-        // Move elements after index one position left
         for (size_t i = index; i < size_ - 1; ++i) {
             data_[i] = std::move(data_[i + 1]);
         }
@@ -137,5 +130,5 @@ public:
     }
 };
 
-#endif // ARRAY_H
+#endif
 
